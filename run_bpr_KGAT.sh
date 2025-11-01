@@ -1,0 +1,24 @@
+python KGAT.py \
+  --data_root ./ \
+  --epochs 10 \
+  --batch_size 1024 \
+  --emb_dim 32 \
+  --rel_dim 32 \
+  --layers 2 \
+  --lr 5e-4 \
+  --neg_per_pos 2 \
+  --reg 1e-4 \
+  --valid_ratio 0.2 \
+  --topk 10 \
+  --device cuda:1 \
+  --max_features 2000 \
+  --text_hidden 64 \
+  --id_dim 32 \
+  --semantic_topk 5 \
+  --add_qt_semantic 0 \
+  --graph_scope train \
+  --tfidf_fit_scope train \
+  --knn_N 8 \
+  --eval_cand_size 1000 \
+  --rebuild_cache 0 \
+  --rebuild_training_cache 0
