@@ -69,9 +69,9 @@ We synthesize realistic **(M, T)** configurations by retrieving relevant compone
 
 Table 2 summarizes the overall leaderboard performance across Parts I–III and the full benchmark. Overall, the strongest gains come from content-aware capability matching that leverages the natural-language descriptions of queries, backbone models, and tools, rather than relying primarily on ID-based collaborative signals. This trend is most pronounced in the long-tail, sparse regimes (especially Parts II/III), where interaction reuse is limited and generalization to previously unseen or rarely-seen configurations is essential. Together, the results support AgentSelectBench’s core premise: effective narrative query-to-agent recommendation benefits from semantic alignment at the capability level, and the benchmark provides a reliable stress test for such generalization.
 
-<!-- <div align="center">
+<div align="center">
   <img src="images/Table2.png" alt="Table 2" width="300"/>
-</div> -->
+</div>
 
 
 
