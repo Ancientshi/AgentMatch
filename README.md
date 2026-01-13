@@ -3,7 +3,7 @@
 **AgentSelectBench (AGENTSELECT)** is a unified-supervision benchmark for **narrative query-to-agent recommendation**: given a free-form natural-language request, rank **deployable agent configurations** represented as capability profiles **(backbone LLM, toolkit)**. It systematically converts heterogeneous evaluation artifacts (LLM leaderboards, tool-use benchmarks, etc.) into **query-conditioned, positive-only** interactions for training and evaluating agent recommenders at scale. 
 
 <div align="center">
-  <img src="images/Figure1.png" alt="Figure 1" width="600"/>
+  <img src="images/Figure1.png" alt="Figure 1" width="800"/>
 </div>
 
 > **Status:** this repository is **under active refinement**. We are progressively cleaning code, adding missing scripts/docs, and improving reproducibility. If, during review, you notice incomplete parts or rough edges, please treat them as ongoing engineering work—we are actively consolidating everything.
@@ -39,7 +39,7 @@ Each agent is represented as a **capability profile**:
 
 
 <div align="center">
-  <img src="images/Figure3.png" alt="Figure 3" width="600"/>
+  <img src="images/Figure3.png" alt="Figure 3" width="800"/>
 </div>
 
 AgentSelectBench comprises three complementary dataset parts:
@@ -70,7 +70,7 @@ We synthesize realistic **(M, T)** configurations by retrieving relevant compone
 Table 2 summarizes the overall leaderboard performance across Parts I–III and the full benchmark. Overall, the strongest gains come from content-aware capability matching that leverages the natural-language descriptions of queries, backbone models, and tools, rather than relying primarily on ID-based collaborative signals. This trend is most pronounced in the long-tail, sparse regimes (especially Parts II/III), where interaction reuse is limited and generalization to previously unseen or rarely-seen configurations is essential. Together, the results support AgentSelectBench’s core premise: effective narrative query-to-agent recommendation benefits from semantic alignment at the capability level, and the benchmark provides a reliable stress test for such generalization.
 
 <div align="center">
-  <img src="images/Table2.png" alt="Table 2" width="600"/>
+  <img src="images/Table2.png" alt="Table 2" width="800"/>
 </div>
 
 
