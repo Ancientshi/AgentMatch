@@ -39,8 +39,8 @@ class SimpleBPRDNN(nn.Module):
         use_query_id_emb: bool = False,
         use_tool_id_emb: bool = True,
         use_llm_id_emb: bool = True,
-        use_layernorm: bool = False,   # 可选：进一步稳一点
-        dropout: float = 0.0,          # 可选：轻量正则
+        use_layernorm: bool = False,   
+        dropout: float = 0.0,          
     ):
         super().__init__()
 
