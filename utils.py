@@ -34,9 +34,9 @@ def print_metrics_table(title, metrics_dict, ks=(5, 10, 50), filename=''):
     log_dir = "log"
     os.makedirs(log_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_path = os.path.join(log_dir, f"{filename}_{timestamp}.log")
+    log_path = os.path.join(log_dir, f"{filename}.log")
     with open(log_path, "a", encoding="utf-8") as log_file:
-        print(f"\n== {title} ==")
+        print(f"== {title}_{timestamp} ==")
         header = f"{'@K':>4} | {'P':>7} {'R':>7} {'F1':>7} {'Hit':>7} {'nDCG':>7} {'MRR':>7}"
         print(header)
         print("-" * len(header))
