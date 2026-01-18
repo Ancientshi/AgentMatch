@@ -6,9 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 
-DATA_ROOT=/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset \
-MODEL_PATH=/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/.cache/run_Table4/models/latest_01915b90.pt \
-QUESTIONS_JSONL=/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/PracticalEval/questions/partIII_sample_200_records.jsonl \
+DATA_ROOT=/home/username/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset \
+MODEL_PATH=/home/username/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/.cache/run_Table4/models/latest_01915b90.pt \
+QUESTIONS_JSONL=/home/username/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/PracticalEval/questions/partIII_sample_200_records.jsonl \
 DEVICE=cuda:0 \
 
 

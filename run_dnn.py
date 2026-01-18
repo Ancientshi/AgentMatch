@@ -20,10 +20,8 @@ from agent_rec.features import (
     build_unified_corpora,
     feature_cache_exists,
     build_agent_content_view,
-    load_feature_cache,
-    load_q_vectorizer,
-    save_feature_cache,
-    save_q_vectorizer,
+    save_vectorizers,
+    load_vectorizers,
     UNK_TOOL_TOKEN,
     UNK_LLM_TOKEN,
     build_agent_tool_id_buffers,
@@ -85,22 +83,21 @@ def main():
     )
 
     if feature_cache_exists(feature_cache_dir) and args.rebuild_feature_cache == 0:
-        feature_cache = load_feature_cache(feature_cache_dir)
-        q_vectorizer_runtime = load_q_vectorizer(feature_cache_dir)
-        if q_vectorizer_runtime is None:
-            _, q_texts, _, _, _, _, _, _ = build_unified_corpora(all_agents, all_questions, tools)
-            from sklearn.feature_extraction.text import TfidfVectorizer
+        vecs = load_vectorizers(feature_cache_dir)
+        if vecs is None:
+            raise RuntimeError(
+                f"[cache] feature cache exists but vectorizers are missing in {feature_cache_dir}. "
+                f"Please rebuild with --rebuild_feature_cache 1."
+            )
 
-            q_vectorizer_runtime = TfidfVectorizer(
-                max_features=args.max_features, lowercase=True
-            ).fit(q_texts)
-            save_q_vectorizer(feature_cache_dir, q_vectorizer_runtime)
+        q_vectorizer_runtime = vecs.q_vec
     else:
-        feature_cache, q_vectorizer_runtime = build_feature_cache(
+        feature_cache, vecs = build_feature_cache(
             all_agents, all_questions, tools, max_features=args.max_features
         )
-        save_feature_cache(feature_cache_dir, feature_cache)
-        save_q_vectorizer(feature_cache_dir, q_vectorizer_runtime)
+
+        save_vectorizers(feature_cache_dir, vecs)  # 会写 q/model/tool 三个 pkl
+        q_vectorizer_runtime = vecs.q_vec
         print(f"[cache] saved features to {feature_cache_dir}")
 
     Q_np = feature_cache.Q.astype(np.float32)

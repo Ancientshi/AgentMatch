@@ -30,7 +30,7 @@ RUN_KALM_LORA="${RUN_KALM_LORA:-1}"
 # Base model can point to the original KaLM embedding HF repo
 KALM_BASE_MODEL_DIR="${KALM_BASE_MODEL_DIR:-KaLM-Embedding/KaLM-embedding-multilingual-mini-instruct-v2.5}"
 # Fine-tuned export directory (Sentence-Transformers format)
-KALM_LORA_MODEL_DIR="${KALM_LORA_MODEL_DIR:-/home/yunxshi/Data/workspace/QueryAgentMatch/benchmark/KALM/st-biencoder}"
+KALM_LORA_MODEL_DIR="${KALM_LORA_MODEL_DIR:-/home/username/Data/workspace/QueryAgentMatch/benchmark/KALM/st-biencoder}"
 
 if [[ "$RUN_KALM_BASE" == "1" ]]; then
   python "$SCRIPT_DIR/../infer_KALM.py" \

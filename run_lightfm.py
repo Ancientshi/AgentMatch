@@ -12,24 +12,23 @@ from datetime import datetime
 import numpy as np
 import torch
 from tqdm.auto import tqdm
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 from agent_rec.cli_common import add_shared_training_args
-from agent_rec.config import EVAL_TOPK, POS_TOPK, POS_TOPK_BY_PART, TFIDF_MAX_FEATURES
+from agent_rec.config import POS_TOPK, POS_TOPK_BY_PART, TFIDF_MAX_FEATURES
 from agent_rec.data import build_training_pairs, stratified_train_valid_split
 from agent_rec.features import (
-    build_agent_tool_id_buffers,
-    build_agent_content_view,
     build_feature_cache,
+    build_agent_content_view,
     build_unified_corpora,
     feature_cache_exists,
     load_feature_cache,
-    load_q_vectorizer,
-    normalize_features,
     save_feature_cache,
-    save_q_vectorizer,
+    load_vectorizers,
+    save_vectorizers,
+    normalize_features,
     UNK_TOOL_TOKEN,
     UNK_LLM_TOKEN,
+    build_agent_tool_id_buffers,
 )
 from agent_rec.knn import build_knn_cache, build_knn_cache_with_vectorizer, load_knn_cache
 from agent_rec.eval import evaluate_sampled_knn_top10, split_eval_qids_by_part
@@ -41,7 +40,7 @@ from agent_rec.run_common import (
     shared_cache_dir,
 )
 
-from utils import print_metrics_table  # 依赖你现有 utils.py
+from utils import print_metrics_table
 
 
 def main():
@@ -53,24 +52,32 @@ def main():
         batch_size_default=4096,
         lr_default=5e-3,
     )
-    parser.add_argument("--factors", type=int, default=128)
 
+    # LightFM-specific
+    parser.add_argument("--factors", type=int, default=128)
     parser.add_argument("--alpha_id", type=float, default=1.0)
     parser.add_argument("--alpha_feat", type=float, default=1.0)
+    parser.add_argument("--alpha_tool", type=float, default=1.0)
+
+    # TFIDF feature-cache
     parser.add_argument("--max_features", type=int, default=TFIDF_MAX_FEATURES)
     parser.add_argument("--rebuild_feature_cache", type=int, default=0)
 
+    # Optional external feature matrices
     parser.add_argument("--user_features_path", type=str, default="")
     parser.add_argument("--item_features_path", type=str, default="")
+
+    # Feature switches
     parser.add_argument("--use_llm_id_emb", type=int, default=1)
     parser.add_argument("--use_tool_id_emb", type=int, default=1)
     parser.add_argument("--use_model_content_vector", type=int, default=1)
     parser.add_argument("--use_tool_content_vector", type=int, default=1)
-    parser.add_argument("--alpha_tool", type=float, default=1.0)
 
+    # KNN-copy
     parser.add_argument("--knn_N", type=int, default=3)
 
     args = parser.parse_args()
+
     boot = bootstrap_run(
         data_root=args.data_root,
         exp_name=args.exp_name,
@@ -94,57 +101,74 @@ def main():
     qids_in_rank = boot.qids_in_rank
     data_sig = boot.data_sig
     exp_cache_dir = boot.exp_cache_dir
+
     feature_cache_dir = shared_cache_dir(
         args.data_root,
         "features",
         f"tfidf_{args.max_features}_{data_sig}",
     )
 
+    using_external_features = bool(args.user_features_path) or bool(args.item_features_path)
+
+    # IMPORTANT: always initialize
+    feature_cache = None
+    vecs = None
     q_vectorizer_runtime = None
-    if (not args.user_features_path) and (not args.item_features_path):
+
+    if not using_external_features:
         if feature_cache_exists(feature_cache_dir) and args.rebuild_feature_cache == 0:
             feature_cache = load_feature_cache(feature_cache_dir)
-            q_vectorizer_runtime = load_q_vectorizer(feature_cache_dir)
-            if q_vectorizer_runtime is None:
-                _, q_texts, _, _, _, _, _, _ = build_unified_corpora(all_agents, all_questions, tools)
-                q_vectorizer_runtime = TfidfVectorizer(
-                    max_features=args.max_features, lowercase=True
-                ).fit(q_texts)
-                save_q_vectorizer(feature_cache_dir, q_vectorizer_runtime)
+            vecs = load_vectorizers(feature_cache_dir)
+            if feature_cache is None or vecs is None:
+                raise RuntimeError(
+                    f"[cache] feature cache exists but is incomplete in {feature_cache_dir}. "
+                    f"Please rebuild with --rebuild_feature_cache 1."
+                )
+            q_vectorizer_runtime = vecs.q_vec
         else:
-            feature_cache, q_vectorizer_runtime = build_feature_cache(
+            feature_cache, vecs = build_feature_cache(
                 all_agents, all_questions, tools, max_features=args.max_features
             )
             save_feature_cache(feature_cache_dir, feature_cache)
-            save_q_vectorizer(feature_cache_dir, q_vectorizer_runtime)
-            print(f"[cache] saved features to {feature_cache_dir}")
-    else:
+            save_vectorizers(feature_cache_dir, vecs)
+            q_vectorizer_runtime = vecs.q_vec
+            print(f"[cache] rebuilt & saved features to {feature_cache_dir}")
+
+    # -------------------------
+    # 2) Prepare feature matrices + tool/llm buffers
+    # -------------------------
+    if feature_cache is None:
+        # External CSR features mode (no feature_cache, no tfidf vectorizer)
         with open(args.user_features_path, "rb") as f:
             U = pickle.load(f)
         with open(args.item_features_path, "rb") as f:
             V = pickle.load(f)
+
         if U.shape[0] != len(q_ids) or V.shape[0] != len(a_ids):
             raise ValueError("CSR rows mismatch between provided features and data.")
-        feature_cache = None
-        q_vectorizer_runtime = None
 
-    if feature_cache is None:
         Q_np = U.toarray().astype(np.float32)
         A_text_full_np = V.toarray().astype(np.float32)
-        if not args.use_model_content_vector or not args.use_tool_content_vector:
+
+        if (not bool(args.use_model_content_vector)) or (not bool(args.use_tool_content_vector)):
             print(
                 "[warn] Custom feature matrices provided; "
-                "use_model_content_vector/use_tool_content_vector flags are ignored."
+                "use_model_content_vector/use_tool_content_vector flags are ignored for A_text_full."
             )
+
+        # Need tool buffers + llm ids from raw corpora (for id embeddings)
         _, _, _, _, _, _, a_tool_lists, llm_ids = build_unified_corpora(all_agents, all_questions, tools)
+
         tool_id_vocab = [UNK_TOOL_TOKEN] + tool_names
         tool_vocab_map = {n: i for i, n in enumerate(tool_id_vocab)}
         agent_tool_idx_padded, agent_tool_mask = build_agent_tool_id_buffers(a_tool_lists, tool_vocab_map)
+
         llm_vocab = [UNK_LLM_TOKEN] + [lid for lid in llm_ids if lid]
         llm_vocab = list(dict.fromkeys(llm_vocab))  # preserve order
         llm_vocab_map = {n: i for i, n in enumerate(llm_vocab)}
         agent_llm_idx = np.array([llm_vocab_map.get(lid, 0) for lid in llm_ids], dtype=np.int64)
     else:
+        # Feature-cache mode
         Q_np = feature_cache.Q.astype(np.float32)
         A_text_full_np = build_agent_content_view(
             cache=feature_cache,
@@ -157,12 +181,16 @@ def main():
         llm_vocab = feature_cache.llm_vocab
         agent_llm_idx = feature_cache.agent_llm_idx
 
+    # Normalize to CSR for LightFM bag-of-features
     U_csr, V_csr = normalize_features(Q_np, A_text_full_np)
     print(f"[features] user_features: {U_csr.shape}, item_features: {V_csr.shape}")
 
     u_feats_per_row, u_vals_per_row, num_user_feats = csr_to_bag_lists(U_csr)
     i_feats_per_row, i_vals_per_row, num_item_feats = csr_to_bag_lists(V_csr)
 
+    # -------------------------
+    # 3) Training cache
+    # -------------------------
     want_meta = {
         "data_sig": data_sig,
         "pos_topk_by_part": POS_TOPK_BY_PART,
@@ -171,11 +199,18 @@ def main():
         "split_seed": int(args.split_seed),
         "valid_ratio": float(args.valid_ratio),
     }
-    training_cache_dir = shared_cache_dir(args.data_root, "training", f"{data_sig}_{cache_key_from_meta(want_meta)}")
+    training_cache_dir = shared_cache_dir(
+        args.data_root,
+        "training",
+        f"{data_sig}_{cache_key_from_meta(want_meta)}",
+    )
 
     def build_cache():
         train_qids, valid_qids = stratified_train_valid_split(
-            qids_in_rank, qid_to_part=qid_to_part, valid_ratio=args.valid_ratio, seed=args.split_seed
+            qids_in_rank,
+            qid_to_part=qid_to_part,
+            valid_ratio=args.valid_ratio,
+            seed=args.split_seed,
         )
         print(f"[split] train={len(train_qids)}  valid={len(valid_qids)}")
 
@@ -190,8 +225,7 @@ def main():
             rng_seed=args.rng_seed_pairs,
         )
         pairs_idx = [(qid2idx[q], aid2idx[p], aid2idx[n]) for (q, p, n) in pairs]
-        pairs_idx_np = np.array(pairs_idx, dtype=np.int64)
-        return train_qids, valid_qids, pairs_idx_np
+        return train_qids, valid_qids, np.array(pairs_idx, dtype=np.int64)
 
     train_qids, valid_qids, pairs_idx_np = load_or_build_training_cache(
         training_cache_dir,
@@ -200,14 +234,18 @@ def main():
         build_cache,
     )
 
+    # -------------------------
+    # 4) Model
+    # -------------------------
     device = torch.device(args.device)
+
     model = LightFM(
         num_q=len(q_ids),
         num_a=len(a_ids),
         num_llm_ids=len(llm_vocab),
         num_user_feats=num_user_feats,
         num_item_feats=num_item_feats,
-        num_tool_ids=len(tool_id_vocab) if args.use_tool_id_emb else 0,
+        num_tool_ids=len(tool_id_vocab) if bool(args.use_tool_id_emb) else 0,
         factors=args.factors,
         add_bias=True,
         alpha_id=args.alpha_id,
@@ -217,15 +255,20 @@ def main():
         agent_llm_idx=torch.tensor(agent_llm_idx, dtype=torch.long, device=device),
         use_llm_id_emb=bool(args.use_llm_id_emb),
     ).to(device)
+
     model.set_user_feat_lists(u_feats_per_row, u_vals_per_row)
     model.set_item_feat_lists(i_feats_per_row, i_vals_per_row)
-    if args.use_tool_id_emb:
-        tool_ids = torch.tensor(agent_tool_idx_padded, dtype=torch.long, device=device)
-        tool_mask = torch.tensor(agent_tool_mask, dtype=torch.float32, device=device)
-        model.set_item_tool_id_buffers(tool_ids, tool_mask)
+
+    if bool(args.use_tool_id_emb):
+        tool_ids_t = torch.tensor(agent_tool_idx_padded, dtype=torch.long, device=device)
+        tool_mask_t = torch.tensor(agent_tool_mask, dtype=torch.float32, device=device)
+        model.set_item_tool_id_buffers(tool_ids_t, tool_mask_t)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
+    # -------------------------
+    # 5) Train
+    # -------------------------
     pairs = pairs_idx_np.tolist()
     num_pairs = len(pairs)
     num_batches = math.ceil(num_pairs / args.batch_size)
@@ -236,10 +279,12 @@ def main():
         total_loss = 0.0
         pbar = tqdm(range(num_batches), desc=f"Epoch {epoch}/{args.epochs}", leave=True, dynamic_ncols=True)
         model.train()
+
         for b in pbar:
-            batch = pairs[b * args.batch_size:(b + 1) * args.batch_size]
+            batch = pairs[b * args.batch_size : (b + 1) * args.batch_size]
             if not batch:
                 continue
+
             q_idx = torch.tensor([t[0] for t in batch], dtype=torch.long, device=device)
             pos_idx = torch.tensor([t[1] for t in batch], dtype=torch.long, device=device)
             neg_idx = torch.tensor([t[2] for t in batch], dtype=torch.long, device=device)
@@ -256,9 +301,11 @@ def main():
 
         print(f"Epoch {epoch}/{args.epochs} - BPR loss: {(total_loss / num_batches if num_batches else 0.0):.4f}")
 
+    # -------------------------
+    # 6) Save
+    # -------------------------
     model_dir = os.path.join(exp_cache_dir, "models")
     os.makedirs(model_dir, exist_ok=True)
-    data_sig = want_meta["data_sig"]
 
     ckpt_path = os.path.join(model_dir, f"{args.exp_name}_{data_sig}.pt")
     meta_path = os.path.join(model_dir, f"meta_{args.exp_name}_{data_sig}.json")
@@ -268,9 +315,15 @@ def main():
         "data_sig": data_sig,
         "saved_at": datetime.now().isoformat(timespec="seconds"),
         "dims": {"num_q": len(q_ids), "num_a": len(a_ids), "factors": args.factors},
-        "mappings": {"q_ids": q_ids, "a_ids": a_ids},
+        "mappings": {"q_ids": q_ids, "a_ids": a_ids, "tool_names": tool_names},
         "args": vars(args),
         "model_extra": model.extra_state_dict(),
+        "flags": {
+            "use_llm_id_emb": bool(args.use_llm_id_emb),
+            "use_tool_id_emb": bool(args.use_tool_id_emb),
+            "use_model_content_vector": bool(args.use_model_content_vector),
+            "use_tool_content_vector": bool(args.use_tool_content_vector),
+        },
     }
     torch.save(ckpt, ckpt_path)
     with open(meta_path, "w", encoding="utf-8") as f:
@@ -278,7 +331,11 @@ def main():
     print(f"[save] model -> {ckpt_path}")
     print(f"[save] meta  -> {meta_path}")
 
+    # -------------------------
+    # 7) KNN-copy cache
+    # -------------------------
     knn_path = os.path.join(exp_cache_dir, "knn_copy.pkl")
+
     if q_vectorizer_runtime is None:
         build_knn_cache(
             train_qids=train_qids,
@@ -296,9 +353,13 @@ def main():
             cache_path=knn_path,
             tfidf=q_vectorizer_runtime,
         )
+
     print("[cache] saved KNN-copy cache")
     knn_cache = load_knn_cache(knn_path)
 
+    # -------------------------
+    # 8) Eval
+    # -------------------------
     model.eval()
     topk = int(args.topk)
 
@@ -325,6 +386,7 @@ def main():
         qids_part = part_splits.get(part, [])
         if not qids_part:
             continue
+
         m_part = evaluate_sampled_knn_top10(
             model=model,
             aid2idx=aid2idx,

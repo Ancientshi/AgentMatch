@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA_ROOT="${DATA_ROOT:-/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset}"
+DATA_ROOT="${DATA_ROOT:-path_to_dataset}"
 DEVICE="${DEVICE:-cuda:0}"
 EXP_SUFFIX="${EXP_SUFFIX:-}"
 

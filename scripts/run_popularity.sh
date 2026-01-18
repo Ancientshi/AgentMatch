@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Update these to point to your dataset root and desired output directory.
-: "${DATA_ROOT:=/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset}"
+: "${DATA_ROOT:=/home/username/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset}"
 : "${OUTPUT_DIR:=${REPO_ROOT}/analysis/artifacts_content_pop}"
 
 mkdir -p "${OUTPUT_DIR}"

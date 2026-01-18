@@ -14,7 +14,7 @@ def bpr_loss(pos: torch.Tensor, neg: torch.Tensor) -> torch.Tensor:
     return -torch.log(torch.sigmoid(pos - neg) + 1e-8).mean()
 
 
-class BPRMF(RecommenderBase):
+class MF(RecommenderBase):
     def __init__(
         self,
         num_q: int,

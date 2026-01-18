@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common_env.sh"
 
 # OneRec_seq.py uses FEATURE_DIR to find FeatureCache (llm/tool ids, etc.)
-export FEATURE_DIR="/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/.cache/shared/features/twotower_bge_fd6ccb32_01915b90"
+export FEATURE_DIR="$DATA_ROOT/.cache/shared/features/twotower_bge_fd6ccb32_01915b90"
 
 python "$SCRIPT_DIR/../../OneRec_seq.py" \
   --data_root "$DATA_ROOT" \

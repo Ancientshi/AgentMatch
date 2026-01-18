@@ -6,6 +6,9 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common_env.sh"
 
+BGE_FEATURE_DIR="$DATA_ROOT/.cache/shared/features/twotower_bge_fd6ccb32_01915b90"
+
+
 python "$SCRIPT_DIR/../../OneRec_seq.py" \
   --data_root "$DATA_ROOT" \
   --device "cuda:0" \
@@ -20,7 +23,7 @@ python "$SCRIPT_DIR/../../OneRec_seq.py" \
   --use_nce 1 \
   --nce_lambda 0.1 \
   --nce_temp 0.07 \
-  --bge_feature_dir /home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/.cache/shared/features/twotower_bge_fd6ccb32_01915b90 \
+  --bge_feature_dir "$BGE_FEATURE_DIR" \
   --init_tok_from_bge 1 \
   --freeze_tok_emb 1 \
   --amp 1 \

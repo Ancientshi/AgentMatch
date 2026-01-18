@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 
-DATA_ROOT=/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset \
-MODEL_PATH=/home/yunxshi/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/.cache/two_tower_all/models/latest_01915b90.pt \
+DATA_ROOT=/home/username/Data/workspace/AgentMatchdataset \
+MODEL_PATH=/home/username/Data/workspace/QueryAgentMatch/QueryAgentMatch-Public/dataset/.cache/two_tower_all/models/latest_01915b90.pt \
 HOST=0.0.0.0 \
 PORT=8000 \
 DEVICE=cuda:0 \

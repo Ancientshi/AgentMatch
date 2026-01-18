@@ -18,17 +18,17 @@ from agent_rec.data import build_training_pairs, stratified_train_valid_split
 from agent_rec.features import build_unified_corpora, UNK_LLM_TOKEN
 from agent_rec.knn import build_knn_cache, load_knn_cache
 from agent_rec.eval import evaluate_sampled_knn_top10, split_eval_qids_by_part
-from agent_rec.models.bpr_mf import BPRMF, bpr_loss
+from agent_rec.models.mf import MF, bpr_loss
 from agent_rec.run_common import bootstrap_run, cache_key_from_meta, load_or_build_training_cache, shared_cache_dir
 
-from utils import print_metrics_table  # 依赖你现有 utils.py
+from utils import print_metrics_table
 
 
 def main():
     parser = argparse.ArgumentParser()
     add_shared_training_args(
         parser,
-        exp_name_default="bpr_mf_knn",
+        exp_name_default="mf_knn",
         epochs_default=5,
         batch_size_default=4096,
         lr_default=5e-3,
@@ -105,7 +105,7 @@ def main():
     agent_llm_idx = np.array([llm_vocab_map.get(lid, 0) for lid in llm_ids], dtype=np.int64)
 
     device = torch.device(args.device)
-    model = BPRMF(
+    model = MF(
         num_q=len(q_ids),
         num_a=len(a_ids),
         num_llm_ids=len(llm_vocab),
