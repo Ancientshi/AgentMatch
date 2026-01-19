@@ -1,6 +1,14 @@
 # AgentSelectBench 🌟
+[![Benchmark Introduction](https://img.shields.io/badge/Docs-Getting%20Started-black)](https://v0-agent-recommendation-website.vercel.app)
+[![Online Demo - API](https://img.shields.io/badge/Demo-Online%20API-orange)](https://api.achieva-ai.com/OneAgent/)
+[![ACL 2026](https://img.shields.io/badge/ACL%202026-Submission-yellow)](#citation)
 
-**AgentSelectBench (AGENTSELECT)** is a unified-supervision benchmark for **narrative query-to-agent recommendation**: given a free-form natural-language request, rank **deployable agent configurations** represented as capability profiles **(backbone LLM, toolkit)**. It systematically converts heterogeneous evaluation artifacts (LLM leaderboards, tool-use benchmarks, etc.) into **query-conditioned, positive-only** interactions for training and evaluating agent recommenders at scale. 
+
+
+**AgentSelectBench (AGENTSELECT)** is a unified-supervision benchmark for **narrative query-to-agent recommendation**: given a free-form natural-language request, rank **deployable agent configurations** represented as capability profiles **(backbone LLM, toolkit)**. It systematically converts heterogeneous evaluation artifacts (LLM leaderboards, tool-use benchmarks, etc.) into **query-conditioned, positive-only** interactions for training and evaluating agent recommenders at scale.
+
+🔗 **Getting Started / Documentation:** https://v0-agent-recommendation-website.vercel.app/#getting-started  
+🧪 **Online Demo (Agent Recommendation API, WIP):** https://api.achieva-ai.com/OneAgent/
 
 <div align="center">
   <img src="images/Figure1.png" alt="Figure 1" width="800"/>
@@ -156,10 +164,11 @@ Table 2 summarizes the overall leaderboard performance across Parts I–III and 
 
 ## Online Demo (WIP) 🧪
 
-We reserve a demo endpoint in the paper as a lightweight interface that takes a narrative query and returns the recommended agent configuration.
+We provide a lightweight demo endpoint (referenced in the paper) that takes a narrative query and returns recommended deployable agent configurations.
 
-* **Demo URL (reserved / under development):** `https://api.achieva-ai.com/OneAgent` 
-* **Note:** the demo is **still being developed** and may not be fully functional during review.
+* **Demo API (reserved / under development):** https://api.achieva-ai.com/OneAgent/
+* **Note:** the demo is **still under development** and may be partially unavailable or unstable during review.
+
 
 ---
 
